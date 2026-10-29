@@ -11,9 +11,7 @@ public class ItemsLoader {
 
     private final List<GUIItem> mainMenuItems = new ArrayList<>();
 
-    private final PlayerProfiles plugin;
     public ItemsLoader(PlayerProfiles plugin){
-        this.plugin = plugin;
     }
 
     public void loadItems(){
@@ -27,9 +25,13 @@ public class ItemsLoader {
     }
 
     private void loadMainMenuItems(){
-        FileConfiguration config = PlayerProfiles.GUI_DEFAULT.getConfig();
+        mainMenuItems.addAll(readItems(PlayerProfiles.GUI_DEFAULT.getConfig()));
+    }
+
+    public static List<GUIItem> readItems(FileConfiguration config) {
+        List<GUIItem> items = new ArrayList<>();
         // Return if there is no items
-        if(!config.isConfigurationSection("items")) return;
+        if(!config.isConfigurationSection("items")) return items;
         // Loop through all items
         for(String configKey : config.getConfigurationSection("items").getKeys(false)){
             String path = "items." + configKey;
@@ -55,11 +57,10 @@ public class ItemsLoader {
             if (itemModel == null || itemModel.isEmpty()) {
                 itemModel = "";
             }
-            // Finally add the item to the list
-            GUIItem guiItem = new GUIItem(type, material, amount, name, slots, glowing, hideAttributes, usePermission,
-                    permission, lore, leftCommands, rightCommands, customModelData, itemModel, onlyOwner, onlyVisitor, priority);
-            this.mainMenuItems.add(guiItem);
+            items.add(new GUIItem(type, material, amount, name, slots, glowing, hideAttributes, usePermission,
+                    permission, lore, leftCommands, rightCommands, customModelData, itemModel, onlyOwner, onlyVisitor, priority));
         }
+        return items;
     }
 
     public List<GUIItem> getMainMenuItems(){

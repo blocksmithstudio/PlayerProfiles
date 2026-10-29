@@ -22,17 +22,7 @@ public class ProfileManager {
     }
 
     public Profile getOrCreate(String uuid){
-        // Check if the player has the data
-        if(profileMap.containsKey(uuid)){
-            // Return the profile data, if the player has the data
-            return profileMap.get(uuid);
-        }
-        // If player doesn't have profile data, create a new one
-        Profile profile = new Profile(uuid);
-        // Store the data to the hash map
-        profileMap.put(uuid, profile);
-        // Return the new profile
-        return profile;
+        return profileMap.computeIfAbsent(uuid, Profile::new);
     }
 
     public boolean isProfileLocked(Player player){
@@ -66,12 +56,8 @@ public class ProfileManager {
         Config data = PlayerProfiles.DATA_DEFAULT;
         // Get the file configuration of data.yml
         FileConfiguration config = data.getConfig();
-        // Loop through all data in the hash map
-        for(String uuid : profileMap.keySet()){
-            // Get the profile object
-            Profile profile = getOrCreate(uuid);
-            // Set the profile data into the config
-            config.set("data." + uuid, profile.isLocked());
+        for (Profile profile : profileMap.values()) {
+            config.set("data." + profile.getUUID(), profile.isLocked());
         }
         // After all data has been set, save the config
         data.saveConfig();

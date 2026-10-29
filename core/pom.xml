@@ -11,23 +11,17 @@
 
     <artifactId>core</artifactId>
 
-    <properties>
-        <maven.compiler.source>21</maven.compiler.source>
-        <maven.compiler.target>21</maven.compiler.target>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    </properties>
-
     <build>
         <defaultGoal>clean package</defaultGoal>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
-                <version>3.6.0</version>
+                <version>3.6.2</version>
                 <configuration>
                     <relocations>
                         <relocation>
-                            <pattern>me.aglerr.mclibs</pattern>
+                            <pattern>com.muhammaddaffa.mdlib</pattern>
                             <shadedPattern>com.muhammaddaffa.playerprofiles.mclibs</shadedPattern>
                         </relocation>
                     </relocations>
@@ -42,9 +36,28 @@
                 </executions>
             </plugin>
         </plugins>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <excludes>
+                    <exclude>plugin.yml</exclude>
+                </excludes>
+            </resource>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+                <includes>
+                    <include>plugin.yml</include>
+                </includes>
+            </resource>
+        </resources>
     </build>
 
     <repositories>
+        <repository>
+            <id>blocksmith-releases</id>
+            <url>https://repo.blocksmith.studio/releases</url>
+        </repository>
         <repository>
             <id>spigot-repo</id>
             <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
@@ -69,9 +82,9 @@
 
     <dependencies>
         <dependency>
-            <groupId>org.spigotmc</groupId>
-            <artifactId>spigot-api</artifactId>
-            <version>1.21.5-R0.1-SNAPSHOT</version>
+            <groupId>${server-api.groupId}</groupId>
+            <artifactId>${server-api.artifactId}</artifactId>
+            <version>${server-api.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -82,9 +95,9 @@
         </dependency>
         <!-- mdlib -->
         <dependency>
-            <groupId>com.github.mdaffa48</groupId>
+            <groupId>com.muhammaddaffa</groupId>
             <artifactId>MDLib</artifactId>
-            <version>2.3.3</version>
+            <version>${mdlib.version}</version>
         </dependency>
         <!-- BlueSlimeCore -->
         <dependency>
@@ -97,7 +110,7 @@
         <dependency>
             <groupId>com.github.sirblobman.combatlogx</groupId>
             <artifactId>api</artifactId>
-            <version>11.4-SNAPSHOT</version>
+            <version>11.7-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -113,4 +126,20 @@
         </dependency>
     </dependencies>
 
+    <profiles>
+        <profile>
+            <id>paper-26.3</id>
+            <properties>
+                <server-api.groupId>io.papermc.paper</server-api.groupId>
+                <server-api.artifactId>paper-api</server-api.artifactId>
+                <server-api.version>26.3.build.230-stable</server-api.version>
+            </properties>
+            <repositories>
+                <repository>
+                    <id>papermc</id>
+                    <url>https://repo.papermc.io/repository/maven-public/</url>
+                </repository>
+            </repositories>
+        </profile>
+    </profiles>
 </project>

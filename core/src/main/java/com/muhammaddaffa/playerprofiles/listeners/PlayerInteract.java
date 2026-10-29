@@ -135,7 +135,7 @@ public class PlayerInteract implements Listener {
         if(ConfigValue.COOLDOWN_ENABLED){
             mapCooldown.put(player, System.currentTimeMillis());
         }
-        // After all those fucking checks, now we finally open the profiles
+        // After the checks, open the profile
         // for the player, first get the InventoryManager class
         InventoryManager inventoryManager = plugin.getInventoryManager();
         // Now we open the inventory for the player

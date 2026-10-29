@@ -12,7 +12,6 @@ import com.muhammaddaffa.playerprofiles.utils.ItemManager;
 import com.muhammaddaffa.playerprofiles.utils.Utils;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.scheduler.BukkitTask;
 
 import java.util.ArrayList;
 import java.util.Comparator;

@@ -10,6 +10,11 @@
     <version>8.0.4</version>
 
     <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <mdlib.version>2.4.7</mdlib.version>
+        <server-api.groupId>org.spigotmc</server-api.groupId>
+        <server-api.artifactId>spigot-api</server-api.artifactId>
+        <server-api.version>1.21.5-R0.1-SNAPSHOT</server-api.version>
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
     </properties>
@@ -23,4 +28,15 @@
         <module>worldguard7</module>
     </modules>
 
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>3.15.0</version>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
 </project>

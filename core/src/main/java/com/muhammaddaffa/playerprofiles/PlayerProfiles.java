@@ -1,7 +1,6 @@
 package com.muhammaddaffa.playerprofiles;
 
 import com.muhammaddaffa.mdlib.MDLib;
-import com.muhammaddaffa.mdlib.utils.Common;
 import com.muhammaddaffa.mdlib.utils.Config;
 import com.muhammaddaffa.playerprofiles.commands.*;
 

@@ -3,9 +3,9 @@ package com.muhammaddaffa.playerprofiles.manager.customgui;
 import com.muhammaddaffa.mdlib.utils.Common;
 import com.muhammaddaffa.playerprofiles.PlayerProfiles;
 import com.muhammaddaffa.playerprofiles.inventory.items.GUIItem;
+import com.muhammaddaffa.playerprofiles.inventory.items.ItemsLoader;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.entity.Boat;
 
 import java.io.File;
 import java.util.*;
@@ -59,45 +59,13 @@ public class CustomGUIManager {
             FileConfiguration config = YamlConfiguration.loadConfiguration(file);
             // Get the file name
             String fileName = file.getName();
-            // Create an empty array list of GUIItem
-            List<GUIItem> guiItems = new ArrayList<>();
             // Get the inventory title
             String title = config.getString("title");
             // Get the final title, null-safe
             String finalTitle = title == null ? "Inventory" : title;
             // Get the inventory size
             int size = config.getInt("size");
-            // Now, we load the items - first loop through all items
-            for (String configKey : config.getConfigurationSection("items").getKeys(false)) {
-                String path = "items." + configKey;
-                String type = config.getString(path + ".type");
-                String material = config.getString(path + ".material");
-                int amount = config.getInt(path + ".amount");
-                String name = config.getString(path + ".name");
-                List<Integer> slots = config.getIntegerList(path + ".slots");
-                boolean glowing = config.getBoolean(path + ".glowing");
-                boolean hideAttributes = config.getBoolean(path + ".hideAttributes");
-                boolean usePermission = config.getBoolean(path + ".usePermission");
-                String permission = config.getString(path + ".permission");
-                List<String> lore = config.getStringList(path + ".lore");
-                List<String> leftCommands = config.getStringList(path + ".leftClickCommands");
-                List<String> rightCommands = config.getStringList(path + ".rightClickCommands");
-                int customModelData = config.getInt(path + ".customModelData");
-                String itemModel = config.getString(path + ".itemModel");
-                boolean onlyOwner = config.getBoolean(path + ".onlyOwner");
-                boolean onlyVisitor = config.getBoolean(path + ".onlyVisitor");
-                int priority = config.getInt(path + ".priority", 0);
-
-                // Null-safe for item model
-                if (itemModel == null || itemModel.isEmpty()) {
-                    itemModel = "";
-                }
-                // Create the GUIItem object
-                GUIItem guiItem = new GUIItem(type, material, amount, name, slots, glowing, hideAttributes, usePermission,
-                        permission, lore, leftCommands, rightCommands, customModelData, itemModel, onlyOwner, onlyVisitor, priority);
-                // Finally add the gui item to the list that has been created before
-                guiItems.add(guiItem);
-            }
+            List<GUIItem> guiItems = ItemsLoader.readItems(config);
             // After items are loaded, now we create the CustomGUI object
             CustomGUI customGUI = new CustomGUI(fileName, Common.color(finalTitle), size, config, guiItems);
             // Now we store the custom gui onto the list

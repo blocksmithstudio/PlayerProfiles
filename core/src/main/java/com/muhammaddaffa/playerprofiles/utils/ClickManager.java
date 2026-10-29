@@ -22,7 +22,7 @@ public class ClickManager {
     private static final Pattern pattern = Pattern.compile("(?<=\\[CONSOLE\\] |\\[PLAYER\\] |\\[SOUND\\] |\\[MESSAGE\\] |\\[MESSAGEPLAYER\\] |\\[MESSAGETARGET\\] |\\[OPENGUIMENU\\] |\\[CLOSE\\])");
 
     public static void handleInventoryClick(GUIItem item, Player player, Player target, InventoryClickEvent event){
-        // First of all, cancel the fucking event
+        // Cancel the click to keep displayed items in the menu.
         event.setCancelled(true);
         // If the click type is LEFT, handle the left click
         if(event.getClick() == ClickType.LEFT)
@@ -101,7 +101,6 @@ public class ClickManager {
             }
             // If the custom gui is valid, open the inventory to the player
             PlayerProfiles.getInstance().getInventoryManager().openInventory(customGUI, player, target);
-            // Open a custom menu (coming soon)
             return;
         }
         // Check if the tag is CLOSE
