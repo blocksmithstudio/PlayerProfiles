@@ -2,6 +2,7 @@ import com.muhammaddaffa.playerprofiles.inventory.items.GUIItem;
 import com.muhammaddaffa.playerprofiles.inventory.items.ItemsLoader;
 import com.muhammaddaffa.playerprofiles.manager.profile.Profile;
 import com.muhammaddaffa.playerprofiles.manager.profile.ProfileManager;
+import com.muhammaddaffa.playerprofiles.utils.ItemManager;
 import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.io.File;
@@ -68,6 +69,29 @@ public class BehaviorChecks {
             assert !bundled.isEmpty() : resource;
             assert bundled.stream().allMatch(item -> !item.slots().isEmpty());
         }
-        System.out.println("Behavior checks passed: profile identity/lock state, GUI values/defaults/order, bundled menus.");
+        for (String version : List.of("1.21.5-R0.1-SNAPSHOT", "26.3-R0.1-SNAPSHOT", "26.3.1-R0.1")) {
+            assert ItemManager.isVersionAtLeast(version, 1, 9, 0);
+            assert ItemManager.isVersionAtLeast(version, 1, 14, 0);
+        }
+        assert !ItemManager.isVersionAtLeast("1.8.8-R0.1", 1, 9, 0);
+        assert !ItemManager.isVersionAtLeast("1.7.10-R0.1", 1, 9, 0);
+        assert !ItemManager.isVersionAtLeast("1.13.2-R0.1", 1, 14, 0);
+        assert !ItemManager.isVersionAtLeast("invalid", 1, 14, 0);
+        assert !ItemManager.isVersionAtLeast("1.x-R0.1", 1, 14, 0);
+        for (String bad : List.of("size: 0", "size: 10", "size: 63", "size: '27'",
+                "size: 9\nitems: false", "size: 9\nitems: {bad: false}",
+                "size: 9\nitems: {bad: {slots: [-1]}}", "size: 9\nitems: {bad: {slots: [9]}}",
+                "size: 9\nitems: {bad: {slots: ['0']}}")) {
+            config.loadFromString(bad);
+            boolean rejected = false;
+            try { ItemsLoader.validateMenu(config); }
+            catch (IllegalArgumentException expected) { rejected = true; }
+            assert rejected : bad;
+        }
+        config.loadFromString("size: 9");
+        ItemsLoader.validateMenu(config);
+        config.loadFromString("size: 9\nitems: {first: {slots: [0, 8]}}");
+        ItemsLoader.validateMenu(config);
+        System.out.println("Behavior checks passed: profile state, item defaults/order, version boundaries and menu validation.");
     }
 }

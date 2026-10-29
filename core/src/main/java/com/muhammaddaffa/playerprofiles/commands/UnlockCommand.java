@@ -66,11 +66,11 @@ public class UnlockCommand implements CommandExecutor, TabCompleter {
             }
             // After the check above, we can get the Player object from the sender
             Player player = (Player) sender;
+            plugin.getProfileManager().unlockProfile(player);
             // Send a lock profile message to player
             player.sendMessage(Common.color(ConfigValue.UNLOCK_PROFILE
                     .replace("{prefix}", ConfigValue.PREFIX)));
-            // Actually lock the player's profile
-            plugin.getProfileManager().unlockProfile(player);
+
         }
         // Check if args length is 1 (/unlockprofile (player))
         if(args.length == 1){
@@ -87,7 +87,8 @@ public class UnlockCommand implements CommandExecutor, TabCompleter {
             if(player == null){
                 // Send an invalid player message
                 sender.sendMessage(Common.color(ConfigValue.INVALID_PLAYER
-                        .replace("{prefix}", ConfigValue.PREFIX)));
+                        .replace("{prefix}", ConfigValue.PREFIX)
+                        .replace("{player}", args[0])));
                 // Stop the code
                 return true;
             }

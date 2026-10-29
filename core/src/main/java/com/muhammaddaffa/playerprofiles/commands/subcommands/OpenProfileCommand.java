@@ -47,7 +47,8 @@ public class OpenProfileCommand extends SubCommand {
             // If the target is not valid player, we want to warn the command sender
             sender.sendMessage(Common.color(ConfigValue.INVALID_PLAYER
                     .replace("{prefix}", ConfigValue.PREFIX)
-                    .replace("{player}", args[2])));
+                    .replace("{player}", args[1])));
+            return;
         }
         // After we check with the above method, we guaranteed the target isn't null
         // And now we want to get the player object
@@ -58,10 +59,11 @@ public class OpenProfileCommand extends SubCommand {
             sender.sendMessage(Common.color(ConfigValue.INVALID_PLAYER
                     .replace("{prefix}", ConfigValue.PREFIX)
                     .replace("{player}", args[2])));
+            return;
         }
         // Now we are guaranteed both player and target will not be null
         // Finally, we open the profile of target for player
-        plugin.getInventoryManager().openInventory(null, player, target);
+        plugin.getInventoryManager().openInventory(null, player, target, true);
     }
 
 }

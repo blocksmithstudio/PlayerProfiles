@@ -18,15 +18,7 @@ import java.util.stream.Collectors;
 public class Utils {
 
     public static boolean hasCustomModelData(){
-        return Bukkit.getVersion().contains("1.14") ||
-                Bukkit.getVersion().contains("1.15") ||
-                Bukkit.getVersion().contains("1.16") ||
-                Bukkit.getVersion().contains("1.17") ||
-                Bukkit.getVersion().contains("1.18") ||
-                Bukkit.getVersion().contains("1.19") ||
-                Bukkit.getVersion().contains("1.20") ||
-                Bukkit.getVersion().contains("1.21") ||
-                Bukkit.getVersion().contains("1.22");
+        return ItemManager.isVersionAtLeast(1, 14, 0);
     }
 
     public static String tryParsePAPI(@NotNull String message, Player player, Player target){
@@ -80,12 +72,11 @@ public class Utils {
         // Get the pitch
         float pitch = (float) config.getDouble(path + ".pitch");
         // Finally play the sound to the player
-        player.playSound(location, sound, volume, pitch);
+        if (sound != null) player.playSound(location, sound, volume, pitch);
     }
 
     public static boolean hasOffHand() {
-        return !Bukkit.getVersion().contains("1.7") ||
-                !Bukkit.getVersion().contains("1.8");
+        return ItemManager.isVersionAtLeast(1, 9, 0);
     }
 
 }

@@ -6,7 +6,8 @@ import org.bukkit.entity.Player;
 public class HDeluxeCombat {
 
     public static boolean isInCombat(Player player){
-        return DependencyManager.getDeluxeAPI().isInCombat(player);
+        return org.bukkit.Bukkit.getPluginManager().isPluginEnabled("DeluxeCombat") &&
+                DependencyManager.getDeluxeAPI() != null && DependencyManager.getDeluxeAPI().isInCombat(player);
     }
 
 }

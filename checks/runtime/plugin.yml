@@ -1,0 +1,5 @@
+name: PlayerProfilesProbe
+version: '1.0'
+main: verification.Probe
+api-version: '26.3'
+depend: [PlayerProfiles]

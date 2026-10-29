@@ -11,6 +11,11 @@
 
     <artifactId>dist</artifactId>
 
+    <properties>
+        <!-- The dist JAR is shaded in place; never reuse its previous merged classes. -->
+        <maven.jar.forceCreation>true</maven.jar.forceCreation>
+    </properties>
+
     <build>
         <directory>../target</directory>
         <finalName>PlayerProfiles-${project.version}</finalName>

@@ -20,31 +20,30 @@ public class DependencyManager {
     public static void checkDependency(){
         PluginManager pm = Bukkit.getPluginManager();
 
-        PLACEHOLDER_API = pm.getPlugin("PlaceholderAPI") != null;
-        COMBAT_LOG_X = pm.getPlugin("CombatLogX") != null;
-        DELUXE_COMBAT = pm.getPlugin("DeluxeCombat") != null;
-        WORLD_GUARD = pm.getPlugin("WorldGuard") != null;
+        PLACEHOLDER_API = pm.isPluginEnabled("PlaceholderAPI");
+        COMBAT_LOG_X = pm.isPluginEnabled("CombatLogX");
+        DELUXE_COMBAT = pm.isPluginEnabled("DeluxeCombat");
+        WORLD_GUARD = pm.isPluginEnabled("WorldGuard");
 
-        if(DELUXE_COMBAT){
-            deluxeAPI = new DeluxeCombatAPI();
-        }
-
-        if(WORLD_GUARD){
+        deluxeAPI = DELUXE_COMBAT ? new DeluxeCombatAPI() : null;
+        WORLD_GUARD_VERSION = 0;
+        if (WORLD_GUARD) {
             Plugin plugin = pm.getPlugin("WorldGuard");
-
-            if(plugin.getDescription().getVersion().startsWith("6"))
-                Logger.info("&rFound WorldGuard! Using WorldGuard API version 6");
+            if (plugin.getDescription().getVersion().startsWith("6")) {
                 WORLD_GUARD_VERSION = 6;
-
-            if(plugin.getDescription().getVersion().startsWith("7"))
-                Logger.info("&rFound WorldGuard! Using WorldGuard API version 7");
+            } else if (plugin.getDescription().getVersion().startsWith("7")) {
                 WORLD_GUARD_VERSION = 7;
+            }
+            if (WORLD_GUARD_VERSION != 0) {
+                Logger.info("Found WorldGuard! Using WorldGuard API version " + WORLD_GUARD_VERSION);
+            } else {
+                WORLD_GUARD = false;
+                Logger.severe("Unsupported WorldGuard API version; region integration is unavailable.");
+            }
         }
-
     }
 
-    public static DeluxeCombatAPI getDeluxeAPI(){
+    public static DeluxeCombatAPI getDeluxeAPI() {
         return deluxeAPI;
     }
-
 }

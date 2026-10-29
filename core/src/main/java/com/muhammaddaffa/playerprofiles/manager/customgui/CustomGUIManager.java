@@ -1,10 +1,10 @@
 package com.muhammaddaffa.playerprofiles.manager.customgui;
 
 import com.muhammaddaffa.mdlib.utils.Common;
+import com.muhammaddaffa.mdlib.utils.Logger;
 import com.muhammaddaffa.playerprofiles.PlayerProfiles;
 import com.muhammaddaffa.playerprofiles.inventory.items.GUIItem;
 import com.muhammaddaffa.playerprofiles.inventory.items.ItemsLoader;
-import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.io.File;
@@ -37,45 +37,42 @@ public class CustomGUIManager {
     }
 
     public void loadCustomGUI() {
-        // Get the directory path
-        // Get the custom-gui directory
         File directory = getMainDirectory();
-        // Check if the directory is not exist
-        if(!directory.exists())
-            // Finally create the directory
-            directory.mkdirs();
-        // Get all files in custom-gui directory
+        if (!directory.isDirectory() && !directory.mkdirs()) {
+            Logger.severe("Cannot create the custom-gui directory.");
+            return;
+        }
         File[] files = directory.listFiles();
-        // Check if there is no files
-        if(files.length <= 0){
-            // Create the file onto the server directory
+        if (files == null) {
+            Logger.severe("Cannot read the custom-gui directory.");
+            return;
+        }
+        if (files.length == 0) {
             plugin.saveResource("custom-gui/punish-gui.yml", false);
+            files = directory.listFiles();
+            if (files == null) {
+                Logger.severe("Cannot read the custom-gui directory.");
+                return;
+            }
         }
-        // Now get the final list of files in the directory
-        File[] finalFiles = directory.listFiles();
-        // Loop through all files
-        for (File file : finalFiles){
-            // Get the file configuration
-            FileConfiguration config = YamlConfiguration.loadConfiguration(file);
-            // Get the file name
-            String fileName = file.getName();
-            // Get the inventory title
-            String title = config.getString("title");
-            // Get the final title, null-safe
-            String finalTitle = title == null ? "Inventory" : title;
-            // Get the inventory size
-            int size = config.getInt("size");
-            List<GUIItem> guiItems = ItemsLoader.readItems(config);
-            // After items are loaded, now we create the CustomGUI object
-            CustomGUI customGUI = new CustomGUI(fileName, Common.color(finalTitle), size, config, guiItems);
-            // Now we store the custom gui onto the list
-            this.guiMap.put(fileName, customGUI);
+        for (File file : files) {
+            if (!file.isFile() || !file.getName().toLowerCase(Locale.ROOT).endsWith(".yml")) continue;
+            try {
+                YamlConfiguration config = new YamlConfiguration();
+                config.load(file);
+                ItemsLoader.validateMenu(config);
+                List<GUIItem> items = ItemsLoader.readItems(config);
+                guiMap.put(file.getName(), new CustomGUI(file.getName(),
+                        Common.color(config.getString("title", "Inventory")), config.getInt("size"), config, items));
+            } catch (Exception ex) {
+                // YAML parser messages can include arbitrary configuration contents.
+                Logger.severe("Skipping an invalid or unreadable custom GUI (" + ex.getClass().getSimpleName() + ").");
+            }
         }
-        // That's it
     }
 
     private File getMainDirectory() {
-        return new File(PlayerProfiles.getInstance().getDataFolder() + File.separator + "custom-gui");
+        return new File(plugin.getDataFolder(), "custom-gui");
     }
 
 }

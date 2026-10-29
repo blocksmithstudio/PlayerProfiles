@@ -79,7 +79,7 @@ public class ProfileCommand implements CommandExecutor, TabCompleter {
             if(!(player.hasPermission("playerprofiles.profile.others"))){
                 player.sendMessage(Common.color(ConfigValue.NO_PERMISSION
                         .replace("{prefix}", ConfigValue.PREFIX)
-                        .replace("[permission}", "playerprofiles.profile.others")));
+                        .replace("{permission}", "playerprofiles.profile.others")));
                 return true;
             }
             // If the player has permission, open the profile of the target

@@ -22,27 +22,31 @@ public class ClickManager {
     private static final Pattern pattern = Pattern.compile("(?<=\\[CONSOLE\\] |\\[PLAYER\\] |\\[SOUND\\] |\\[MESSAGE\\] |\\[MESSAGEPLAYER\\] |\\[MESSAGETARGET\\] |\\[OPENGUIMENU\\] |\\[CLOSE\\])");
 
     public static void handleInventoryClick(GUIItem item, Player player, Player target, InventoryClickEvent event){
+        handleInventoryClick(item, player, target, event, false);
+    }
+
+    public static void handleInventoryClick(GUIItem item, Player player, Player target, InventoryClickEvent event, boolean forced) {
         // Cancel the click to keep displayed items in the menu.
         event.setCancelled(true);
         // If the click type is LEFT, handle the left click
         if(event.getClick() == ClickType.LEFT)
-            handleInventoryLeftClick(item, player, target);
+            handleInventoryLeftClick(item, player, target, forced);
         // If the click type is RIGHT, handle the right click
         if(event.getClick() == ClickType.RIGHT)
-            handleInventoryRightClick(item, player, target);
+            handleInventoryRightClick(item, player, target, forced);
     }
 
-    private static void handleInventoryLeftClick(GUIItem item, Player player, Player target){
+    private static void handleInventoryLeftClick(GUIItem item, Player player, Player target, boolean forced){
         // Loop through all left click commands and handle the task
-        item.leftCommands().forEach(command -> handleTask(command, player, target));
+        item.leftCommands().forEach(command -> handleTask(command, player, target, forced));
     }
 
-    private static void handleInventoryRightClick(GUIItem item, Player player, Player target){
+    private static void handleInventoryRightClick(GUIItem item, Player player, Player target, boolean forced){
         // Loop through all right click commands and handle the task
-        item.rightCommands().forEach(command -> handleTask(command, player, target));
+        item.rightCommands().forEach(command -> handleTask(command, player, target, forced));
     }
 
-    private static void handleTask(String command, Player player, Player target) {
+    private static void handleTask(String command, Player player, Player target, boolean forced) {
         // Get the array from the splitted pattern
         String[] cmds = pattern.split(command);
         String tag = cmds[0];
@@ -100,7 +104,7 @@ public class ClickManager {
                 return;
             }
             // If the custom gui is valid, open the inventory to the player
-            PlayerProfiles.getInstance().getInventoryManager().openInventory(customGUI, player, target);
+            PlayerProfiles.getInstance().getInventoryManager().openInventory(customGUI, player, target, forced);
             return;
         }
         // Check if the tag is CLOSE

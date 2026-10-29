@@ -19,146 +19,114 @@ import java.util.Optional;
 
 public class ItemManager {
 
-    public static ItemStack createItem(GUIItem item, Player player, Player target){
-        ItemBuilder builder = null;
-        // Check if the item material contains ';'
-        if(item.material().contains(";")){
-            // That means this item is a base64 head item
-            // First, we split the ';' to get the head value
-            String[] split = item.material().split(";");
-            String identifier = split[0];
-            // If the identifier is SLOTS, take the player inventory slot as the item
-            if(identifier.equalsIgnoreCase("SLOTS") || identifier.equalsIgnoreCase("SLOT")){
-                int slot = Integer.parseInt(split[1]);
-                ItemStack stack = target.getInventory().getItem(slot);
-                if(stack == null){
-                    return new ItemStack(Material.AIR);
-                } else {
+    public static ItemStack createItem(GUIItem item, Player player, Player target) {
+        if (item.material().isBlank()) return errorItem(item);
+        ItemBuilder builder;
+        if (item.material().contains(";")) {
+            String[] parts = item.material().split(";", 2);
+            if (parts[1].isBlank()) return errorItem(item);
+            switch (parts[0].toUpperCase(java.util.Locale.ROOT)) {
+                case "SLOT", "SLOTS" -> {
+                    ItemStack stack = slotItem(item, target, parts[1]);
+                    if (stack.getType() == Material.AIR) return stack;
                     builder = new ItemBuilder(stack);
                 }
+                case "HEAD", "HEADS" -> builder = headBuilder(item, player, target, parts[1]);
+                default -> { return errorItem(item); }
             }
-            // Head Item
-            if(identifier.equalsIgnoreCase("HEAD") || identifier.equalsIgnoreCase("HEADS")){
-                // Get the head value
-                String headValue = split[1]
-                        .replace("{player}", player.getName())
-                        .replace("{target}", target.getName());
-                // And now build the ItemStack using ItemBuilder
-                ItemBuilder base = new ItemBuilder(XMaterial.PLAYER_HEAD.parseItem())
-                        .name(Utils.tryParsePAPI(item.name(), player, target))
-                        .lore(Utils.tryParsePAPI(item.lore(), player, target))
-                        .amount(Math.max(1, item.amount()))
-                        .customModelData(item.customModelData());
-                try {
-                    base.skull(headValue); // bisa jadi nama player
-                } catch (Exception e) {
-                    // fallback ke Steve (atau custom skin base64)
-                    base.skull("eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJl...");
-                }
-                builder = base;
-            }
-
         } else {
-            // If the item doesn't contains ';', that means the item is not a head
-            // First of all, we check if the item is exist or valid
-            Optional<XMaterial> optionalMaterial = XMaterial.matchXMaterial(item.material());
-            // We check if the item is not valid
-            if(!optionalMaterial.isPresent()){
-                // If so, instead throwing an error, just return error item
-                return errorItem(item);
-            }
-            // Finally create the item stack using the item builder
-            builder = new ItemBuilder(optionalMaterial.get().parseItem())
-                    .name(Utils.tryParsePAPI(item.name(), player, target))
-                    .lore(Utils.tryParsePAPI(item.lore(), player, target))
-                    .amount(Math.max(1, item.amount()))
-                    .customModelData(item.customModelData());
+            Optional<XMaterial> material = XMaterial.matchXMaterial(item.material());
+            ItemStack stack = material.map(XMaterial::parseItem).orElse(null);
+            if (stack == null) return errorItem(item);
+            if (stack.getType().isAir()) return stack;
+            if (stack.getItemMeta() == null) return errorItem(item);
+            builder = configuredBuilder(item, player, target, stack);
         }
-        // Add hide attributes item flag if it's enabled
-        if(item.hideAttributes()) builder.flags(ItemFlag.HIDE_ATTRIBUTES);
-        // Add random enchant and hide enchant attributes if item set to glowing
-        if(item.glowing()) builder.enchant(Enchantment.UNBREAKING).flags(ItemFlag.HIDE_ENCHANTS);
-        // Finally build the item stack
+        if (item.hideAttributes()) builder.flags(ItemFlag.HIDE_ATTRIBUTES);
+        if (item.glowing()) builder.enchant(Enchantment.UNBREAKING).flags(ItemFlag.HIDE_ENCHANTS);
         ItemStack stack = builder.build();
-        // Create ItemMeta
         ItemMeta meta = stack.getItemMeta();
-        if (meta == null) return null;
-        // Add the item model if it's not null or empty
-        String modelItemString = item.itemModel();
-        if (isVersionAtLeast(1, 21, 2)) {
-            if (modelItemString != null) {
-                String[] parts = modelItemString.split(":", 2);
-                if (parts.length == 2) {
-                    NamespacedKey modelItem = NamespacedKey.fromString(parts[0] + ":" + parts[1]);
-                    meta.setItemModel(modelItem);
-                    stack.setItemMeta(meta);
-                }
-            }
+        if (meta == null) return stack;
+        String model = item.itemModel();
+        if (isVersionAtLeast(1, 21, 2) && model != null && !model.isEmpty()) {
+            NamespacedKey key = NamespacedKey.fromString(model);
+            if (key == null) return errorItem(item);
+            meta.setItemModel(key);
+            stack.setItemMeta(meta);
         }
         return stack;
     }
 
-    public static ItemStack createGUIItem(GUIItem item, Player player, Player target){
-        if(item.type() == null)
-            return ItemManager.createItem(item, player, target);
+    private static ItemBuilder configuredBuilder(GUIItem item, Player player, Player target, ItemStack stack) {
+        return new ItemBuilder(stack)
+                .name(Utils.tryParsePAPI(item.name(), player, target))
+                .lore(Utils.tryParsePAPI(item.lore(), player, target))
+                .amount(Math.max(1, item.amount()))
+                .customModelData(item.customModelData());
+    }
 
-        if(item.type().contains(";")){
-            String[] split = item.type().split(";");
-            String identifier = split[0];
-            // Inventory slot item
-            if(identifier.equalsIgnoreCase("SLOTS")){
-                int slot = Integer.parseInt(split[1]);
-                ItemStack stack = target.getInventory().getItem(slot);
-                return stack == null ? new ItemStack(Material.AIR) : stack;
-            }
-            // Head Item
-            if(identifier.equalsIgnoreCase("HEAD") || identifier.equalsIgnoreCase("HEADS")){
-                String headValue = split[1]
-                        .replace("{player}", player.getName())
-                        .replace("{target}", target.getName());
-                ItemBuilder builder = new ItemBuilder(XMaterial.PLAYER_HEAD.parseItem())
-                        .name(Utils.tryParsePAPI(item.name(), player, target))
-                        .lore(Utils.tryParsePAPI(item.lore(), player, target))
-                        .amount(Math.max(1, item.amount()))
-                        .customModelData(item.customModelData())
-                        .skull(headValue);
-                return builder.build();
-            }
+    private static ItemBuilder headBuilder(GUIItem item, Player player, Player target, String value) {
+        ItemBuilder builder = configuredBuilder(item, player, target, new ItemStack(Material.PLAYER_HEAD));
+        String identifier = value.replace("{player}", player.getName()).replace("{target}", target.getName());
+        try {
+            if (identifier.equals(player.getName())) builder.skull(player);
+            else if (identifier.equals(target.getName())) builder.skull(target);
+            else builder.skull(identifier);
+        } catch (RuntimeException ex) {
+            // An untextured player head is a valid fallback for an invalid texture.
+            builder = configuredBuilder(item, player, target, new ItemStack(Material.PLAYER_HEAD));
         }
+        return builder;
+    }
 
-        switch(item.type()){
-            case "HELMET":
-                return createArmorItem(item, player, target, target.getInventory().getHelmet());
-            case "CHESTPLATE":
-                return createArmorItem(item, player, target, target.getInventory().getChestplate());
-            case "LEGGINGS":
-                return createArmorItem(item, player, target, target.getInventory().getLeggings());
-            case "BOOTS":
-                return createArmorItem(item, player, target, target.getInventory().getBoots());
-            case "MAIN_HAND":
-                return createArmorItem(item, player, target, target.getItemInHand());
-            case "OFF_HAND":{
-                if(Utils.hasOffHand()){
-                    return createArmorItem(item, player, target, target.getInventory().getItemInOffHand());
-                }
-                return new ItemStack(Material.AIR);
-            }
-            default:
-                return ItemManager.createItem(item, player, target);
+    private static ItemStack slotItem(GUIItem item, Player target, String value) {
+        try {
+            int slot = Integer.parseInt(value);
+            if (slot < 0 || slot >= target.getInventory().getSize()) return errorItem(item);
+            ItemStack stack = target.getInventory().getItem(slot);
+            return stack == null ? new ItemStack(Material.AIR) : stack.clone();
+        } catch (NumberFormatException ex) {
+            return errorItem(item);
         }
+    }
+
+    public static ItemStack createGUIItem(GUIItem item, Player player, Player target) {
+        if (item.type().contains(";")) {
+            String[] parts = item.type().split(";", 2);
+            if (parts[1].isBlank()) return errorItem(item);
+            return switch (parts[0].toUpperCase(java.util.Locale.ROOT)) {
+                case "SLOT", "SLOTS" -> slotItem(item, target, parts[1]);
+                case "HEAD", "HEADS" -> headBuilder(item, player, target, parts[1]).build();
+                default -> errorItem(item);
+            };
+        }
+        return switch (item.type()) {
+            case "HELMET" -> createArmorItem(item, player, target, target.getInventory().getHelmet());
+            case "CHESTPLATE" -> createArmorItem(item, player, target, target.getInventory().getChestplate());
+            case "LEGGINGS" -> createArmorItem(item, player, target, target.getInventory().getLeggings());
+            case "BOOTS" -> createArmorItem(item, player, target, target.getInventory().getBoots());
+            case "MAIN_HAND" -> createArmorItem(item, player, target, target.getInventory().getItemInMainHand());
+            case "OFF_HAND" -> Utils.hasOffHand()
+                    ? createArmorItem(item, player, target, target.getInventory().getItemInOffHand())
+                    : new ItemStack(Material.AIR);
+            default -> createItem(item, player, target);
+        };
     }
 
     public static void fillItem(FastInv inventory, FileConfiguration config){
         if(!config.getBoolean("fillItems.enabled")) return;
         // Get the Optional XMaterial
-        Optional<XMaterial> optional = XMaterial.matchXMaterial(config.getString("fillItems.material"));
+        String material = config.getString("fillItems.material", "AIR");
+        if (material.isBlank()) return;
+        Optional<XMaterial> optional = XMaterial.matchXMaterial(material);
         // If the XMaterial isn't present, just return
         if(!optional.isPresent()) return;
         // Get the ItemStack if the XMaterial is present
         ItemStack stack = optional.get().parseItem();
+        if (stack == null || stack.getItemMeta() == null) return;
         // Item builder boiss.
         ItemBuilder builder = new ItemBuilder(stack)
-                .name(Common.color(config.getString("fillItems.name")))
+                .name(Common.color(config.getString("fillItems.name", "")))
                 .lore(Common.color(config.getStringList("fillItems.lore")))
                 .customModelData(config.getInt("fillItems.customModelData"));
         // Get the final item stack
@@ -176,7 +144,7 @@ public class ItemManager {
 
     private static ItemStack createArmorItem(GUIItem item, Player player, Player target, ItemStack stack){
         if(stack == null || stack.getType() == Material.AIR) return createItem(item, player, target);
-        return stack;
+        return stack.clone();
     }
 
     private static ItemStack errorItem(GUIItem item){
@@ -188,9 +156,14 @@ public class ItemManager {
     }
 
     public static boolean isVersionAtLeast(int major, int minor, int patch) {
-        String version = Bukkit.getBukkitVersion().split("-")[0];
+        return isVersionAtLeast(Bukkit.getBukkitVersion(), major, minor, patch);
+    }
+
+    public static boolean isVersionAtLeast(String bukkitVersion, int major, int minor, int patch) {
+        String version = bukkitVersion.split("-")[0];
         String[] parts = version.split("\\.");
 
+        if (parts.length < 2) return false;
         try {
             int maj = Integer.parseInt(parts[0]);
             int min = Integer.parseInt(parts[1]);

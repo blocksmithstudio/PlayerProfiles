@@ -64,6 +64,7 @@ public class OpenGUICommand extends SubCommand {
             sender.sendMessage(Common.color(ConfigValue.INVALID_PLAYER
                     .replace("{prefix}", ConfigValue.PREFIX)
                     .replace("{player}", args[2])));
+            return;
         }
         // After the check above, we already guaranteed the target would not be null
         // then we want to get the Custom GUI from args[3]
@@ -85,7 +86,7 @@ public class OpenGUICommand extends SubCommand {
         // But first, we need to get the inventory manager
         InventoryManager inventoryManager = plugin.getInventoryManager();
         // Finally, we open the inventory for the player
-        inventoryManager.openInventory(customGUI, player, target);
+        inventoryManager.openInventory(customGUI, player, target, true);
     }
 
 }

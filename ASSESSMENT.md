@@ -1,9 +1,8 @@
-# PlayerProfiles assessment
+# PlayerProfiles assessment and fixes
 
-Reviewed 2026-10-29. This pass updates dependencies and packaging and makes a
-small cleanup. Existing commands, permissions, configuration keys, item priority,
-menu layout, click actions and profile data format are preserved. Existing logic
-issues below are reported separately to respect the request to preserve behavior.
+Reviewed and fixed 2026-10-29. The first pass updated MDLib and reported existing
+issues while preserving behavior. The owner subsequently requested fixes for all
+reported issues and explicitly retained the admin forced-open bypass.
 
 ## Changes
 
@@ -23,47 +22,50 @@ issues below are reported separately to respect the request to preserve behavior
 - Simplify profile lookup with `computeIfAbsent` and save directly from map values.
 - Add an explicit Paper 26.3 compilation profile and framework-free behavior checks.
 
-## Existing issues retained
+## Fixes to the reported issues
 
-| Priority | Location | Finding |
-| --- | --- | --- |
-| High | `commands/subcommands/OpenProfileCommand.java`, `OpenGUICommand.java` | Missing returns after unsuccessful online-player lookup allow null players into menu creation. The openprofile target error also uses the recipient's argument. |
-| High | `inventory/ProfileInventory.java#setAllItems` | Refresh overwrites visible slots without clearing old items and click handlers. An item hidden after permission loss can retain its old action. |
-| High | `utils/ItemManager.java#createItem`, `createGUIItem` | Malformed `SLOT;`/`HEAD;` values, nonnumeric or out-of-range slots, and unsupported semicolon identifiers can throw during menu creation/refresh. The fallback head texture is truncated and invalid. |
-| Medium | `inventory/ProfileInventory.java#setAllItems` | Custom menus always use the main `gui.yml` filler settings, ignoring their own `fillItems` configuration. |
-| Medium | `inventory/ProfileInventory.java#checkDistance` | The null-target branch dereferences the target; disconnected nonnull targets are not checked with `isOnline()`. |
-| Medium | `manager/customgui/CustomGUIManager.java#loadCustomGUI`, `CustomGuiCreator.java#createCustomGui` | Unreadable directories (`listFiles()` returns null), non-YAML files/directories, missing `menu` sections, and invalid inventory dimensions/slots are not validated consistently. |
-| Medium | `listeners/PlayerInteract.java` | The cooldown map holds strong references to players and has no quit cleanup. Disabling cooldown on reload still enforces entries already in the map. |
-| Medium | `commands/ProfileCommand.java`, `listeners/PlayerInteract.java` | Profile locking, disabled-world/region and combat restrictions apply to right-click interaction but are not enforced by `/profile <player>` or admin-open commands. Clarify intended command bypass policy before changing it. |
-| Medium | `listeners/PlayerInteract.java` | Right-click opening has no permission or `canSee(target)` check. Hidden/vanished player handling depends on other plugins intercepting interaction. |
-| Medium | `manager/profile/ProfileManager.java`, `PlayerProfiles.java#onDisable` | Lock state is persisted only on normal plugin shutdown. A process crash loses changes since the previous shutdown; a startup failure before config initialization can also cause a shutdown null dereference. |
-| Low | `manager/DependencyManager.java#checkDependency` | Missing braces assign WorldGuard version 7 regardless of detected version. The field is currently unused; the wrapper selects the API independently. Optional hooks check plugin presence rather than enabled state. |
-| Low | `commands/ProfileCommand.java`, `LockCommand.java`, `UnlockCommand.java`, `ToggleCommand.java` | The profile-others denial message has a malformed permission placeholder; lock/unlock invalid-player messages omit player substitution; toggle's console usage advertises an unsupported player argument. |
-| Low | `utils/Utils.java` | `hasOffHand()` uses OR between negated version checks and therefore always returns true. The unused `hasCustomModelData()` version whitelist does not include 26.x. |
+| Original finding | Resolution |
+| --- | --- |
+| Null players in admin commands | Return immediately with the correct argument in the error message; shared menu entry also guards null/offline players. |
+| Stale items and click handlers | Clear contents and handlers before every refresh, check visibility before creating items, and recheck permissions at click time. Reload and shutdown close existing menus so old configuration/tasks cannot keep running. |
+| Malformed item specifications | Validate identifiers, missing values and inventory slot bounds; invalid specifications produce an error item. Invalid textures use an ordinary player head; blank materials and AIR fillers cannot crash item construction. Equipment/slot previews clone the target's item. |
+| Wrong custom-menu filler | Each menu passes its own configuration to the renderer. |
+| Null/disconnected distance target | Close safely, cancel timers and use the captured display name. Auto-refresh also stops on disconnect. |
+| Unsafe GUI configuration/files | Validate chest dimensions and integer slot bounds; skip malformed YAML and non-YAML files/directories; handle unreadable directories and absent creator sections. Creator file names cannot escape the GUI directory. |
+| Cooldown retention/reload | Store UUIDs with expiry times, prune expired entries, remove entries on quit, and clear/ignore existing cooldowns when the feature is disabled. |
+| Inconsistent opening restrictions | Normal entry points share permission, lock, world, region, NPC, combat and visibility checks. **Admin forced-open commands retain their explicit bypass**, as requested, including subsequent menu navigation. Owners may view their own locked profiles. |
+| Hidden players / right-click permission | Normal viewing checks `canSee` and uses the existing profile permission nodes. |
+| Shutdown-only saves/startup failure | Lock changes persist immediately, including changes through managed Profile objects. Write a complete temporary file and replace data.yml; revert the in-memory change if saving fails. Failed/corrupt loads never save an empty replacement. Shutdown saves before MDLib cleanup. |
+| Dependency detection / WorldGuard version | Check enabled plugins, reset optional API state and assign WorldGuard versions with correctly scoped branches. Disabled combat hooks return safely. |
+| Command messages | Fix the permission placeholder and invalid-player substitutions; toggle usage no longer advertises an unsupported target argument. Acknowledgements follow successful saves. |
+| Legacy version helpers | Use numeric version comparison with tested legacy and 26.x boundaries. Invalid refresh periods/distances are normalized before scheduling. |
+
+An additional packaging regression was found during verification: incremental dist
+builds could reuse previously shaded class entries. The dist JAR is now recreated
+before shading, so the distribution includes the current core classes.
 
 The repository's existing license restricts redistribution. Making the repository
 public does not change that license or grant redistribution rights.
 
 ## Verification
 
-- Default Maven reactor build/install: passed for all seven modules on JDK 25.
-- Clean `paper-26.3` build: passed against Paper API `26.3.build.230-stable`.
-  Project class bytecode matched the default build.
-- `./checks/run.sh`: passed profile identity/lock-state and GUI field/default/order checks,
-  including both bundled menu configurations.
-- Paper 26.3 build 230 runtime smoke test: 31 checks passed. Verified enable/disable,
-  descriptor version, all command aliases, profile lock/unlock, YAML serialization,
-  reload, owner/visitor menus, custom menus, console list/reload and relocated MDLib.
-  Confirmed the synthetic locked profile remained in `data.yml` after shutdown.
-- Packaged GUI/config/data resources match the repository originals byte-for-byte.
-  The JAR contains relocated MDLib, excludes its original namespace, and does not
-  bundle Bukkit/Paper or the optional plugin APIs. No duplicate ZIP entries.
-- Reachable Git history, historical JAR contents, and the exact staged files were
-  checked locally for credential patterns and unintended private/build artifacts;
-  no candidates were found. This is a bounded review, not a complete security audit.
+- Default seven-module Maven build/install and `./checks/run.sh`: passed on JDK 25.
+- Clean `paper-26.3` build against `26.3.build.230-stable`: passed. All 43 plugin
+  class files match the default artifact used by the runtime tests.
+- Paper 26.3 build 230: **85 regression checks passed**, followed by **86 checks
+  after an actual server restart**, including restored profile lock state.
+- Runtime coverage includes command registration, owner/visitor/custom menus,
+  regular access checks, forced admin navigation, immediate permission revocation,
+  invalid item specifications and AIR fillers, disconnects, cooldown expiry-state
+  cleanup/reload, malformed GUI files, creator path restrictions, immediate saves,
+  corrupt-load preservation and save-failure rollback of memory/cache/disk state.
+- The distribution contains relocated MDLib, excludes server and optional plugin
+  APIs, and has no duplicate ZIP entries. Incremental packaging was also exercised.
+- Shell syntax and exact staged content/credential-pattern checks passed; private
+  test worlds, logs, local tools and caches remain ignored and unpublished.
+  The disposable servers stopped after the checks.
 
-The runtime checks used synthetic players on a real Paper server. Authenticated
-client interaction, real inventories, PlaceholderAPI expansions, WorldGuard,
-WorldEdit, CombatLogX and DeluxeCombat combinations still require live integration
-validation. Folia compatibility is not claimed. There are no intentional gameplay
-or permission-policy changes in this pass.
+Runtime regression checks use synthetic players on a real Paper server. Live
+client sessions and installed PlaceholderAPI/WorldGuard/WorldEdit/CombatLogX/
+DeluxeCombat combinations remain outside the automated integration coverage.
+Folia compatibility is not claimed.

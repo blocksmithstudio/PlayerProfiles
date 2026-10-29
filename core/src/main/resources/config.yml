@@ -102,6 +102,7 @@ messages:
   lockProfileOthers: "{prefix} &7You have &clocked &7{player}'s profile."
   unlockProfile: "{prefix} &7You have &aunlocked &7your profile."
   unlockProfileOthers: "{prefix} &7You have &aunlocked &7{player}'s profile."
+  menuUnavailable: "{prefix} &cThis menu is unavailable. Please contact an administrator."
   invalidGUIName: "{prefix} &cThere is no GUI with name '{gui}' &7(See /playerprofiles listgui)"
   listGUI: "{prefix} &7List GUI: &a{gui}"
   help:

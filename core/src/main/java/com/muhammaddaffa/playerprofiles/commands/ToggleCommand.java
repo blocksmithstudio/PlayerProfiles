@@ -43,6 +43,10 @@ public class ToggleCommand implements CommandExecutor, TabCompleter {
 
     @Override
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command cmd, @NotNull String label, @NotNull String[] args) {
+        if (args.length != 0) {
+            sender.sendMessage(Common.color("&cUsage: /toggleprofile"));
+            return true;
+        }
         // Check if the args length is 0 (/lockprofile)
         if(args.length == 0){
             // Permission: playerprofiles.lockprofile
@@ -55,23 +59,22 @@ public class ToggleCommand implements CommandExecutor, TabCompleter {
             // If the sender is not a player (the sender is console)
             if(!(sender instanceof Player)){
                 // Send console a usage message and return the code
-                sender.sendMessage(Common.color("&cUsage: /toggleprofile (player)"));
+                sender.sendMessage(Common.color("&cOnly players can use /toggleprofile"));
                 return true;
             }
             // After the check above, we can get the Player object from the sender
             Player player = (Player) sender;
             // Check if player is locked
             if (plugin.getProfileManager().getOrCreate(player).isLocked()) {
+                plugin.getProfileManager().unlockProfile(player);
                 player.sendMessage(Common.color(ConfigValue.UNLOCK_PROFILE
                         .replace("{prefix}", ConfigValue.PREFIX)));
-                // Actually lock the player's profile
-                plugin.getProfileManager().unlockProfile(player);
+
             } else {
-                // Send a lock profile message to player
+                plugin.getProfileManager().lockProfile(player);
                 player.sendMessage(Common.color(ConfigValue.LOCK_PROFILE
                         .replace("{prefix}", ConfigValue.PREFIX)));
-                // Actually lock the player's profile
-                plugin.getProfileManager().lockProfile(player);
+
             }
         }
         return true;

@@ -10,6 +10,7 @@ import com.muhammaddaffa.playerprofiles.inventory.items.GUIItem;
 import com.muhammaddaffa.playerprofiles.utils.ClickManager;
 import com.muhammaddaffa.playerprofiles.utils.ItemManager;
 import com.muhammaddaffa.playerprofiles.utils.Utils;
+import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
@@ -18,100 +19,91 @@ import java.util.Comparator;
 import java.util.List;
 
 public class ProfileInventory extends FastInv {
+    private final FileConfiguration config;
+    private final boolean forced;
+    private final String targetName;
+    private final List<HandleTask> tasks = new ArrayList<>();
 
     public ProfileInventory(List<GUIItem> items, Player player, Player target, int size, String title) {
+        this(items, player, target, size, title, PlayerProfiles.GUI_DEFAULT.getConfig(), false);
+    }
+
+    public ProfileInventory(List<GUIItem> items, Player player, Player target, int size, String title,
+                            FileConfiguration config, boolean forced) {
         super(size, Utils.tryParsePAPI(Common.color(title), player, target));
-
-        this.setAllItems(items, player, target);
-
-        // If auto refresh is enabled
-        if(ConfigValue.AUTO_REFRESH_ENABLED){
-            // Start the auto refresh task
-            HandleTask task = Executor.syncTimer(0L, ConfigValue.AUTO_REFRESH_TICK, () ->
-                    this.setAllItems(items, player, target));
-            // And remove the task after the inventory closed
-            this.addCloseHandler(event -> task.cancel());
+        this.config = config;
+        this.forced = forced;
+        this.targetName = target.getName();
+        setAllItems(items, player, target);
+        if (ConfigValue.AUTO_REFRESH_ENABLED) {
+            tasks.add(Executor.syncTimer(0L, Math.max(1, ConfigValue.AUTO_REFRESH_TICK), () -> {
+                if (!player.isOnline() || !target.isOnline()) {
+                    close(player);
+                    return;
+                }
+                setAllItems(items, player, target);
+            }));
         }
-        // If distance check is enabled
-        if(ConfigValue.DISTANCE_CHECK_ENABLED){
-            // Start the check distance task
-            HandleTask task = Executor.syncTimer(0L, 20L, () ->
-                    checkDistance(player, target));
-            // And remove the task after the inventory closed
-            this.addCloseHandler(event -> task.cancel());
+        if (ConfigValue.DISTANCE_CHECK_ENABLED) {
+            tasks.add(Executor.syncTimer(0L, 20L, () -> checkDistance(player, target)));
         }
+        addCloseHandler(event -> cancelTasks());
+    }
 
+    private void cancelTasks() {
+        tasks.forEach(HandleTask::cancel);
+        tasks.clear();
+    }
+
+    private void close(Player player) {
+        cancelTasks();
+        if (player != null && player.isOnline()) player.closeInventory();
+    }
+
+    private boolean visible(GUIItem item, Player player, Player target) {
+        return (!item.usePermission() || player.hasPermission(item.permission())) &&
+                (!item.onlyVisitor() || !player.equals(target)) &&
+                (!item.onlyOwner() || player.equals(target));
     }
 
     private void setAllItems(List<GUIItem> items, Player player, Player target) {
-        List<GUIItem> clonedItem = new ArrayList<>(items);
-        clonedItem.sort(Comparator.comparingInt(GUIItem::priority));
-
-        // Loop through all items
-        clonedItem.forEach(item -> {
-            // Get the item stack
+        // Clear both contents and handlers so hidden items cannot keep old actions.
+        clearItems();
+        List<GUIItem> sorted = new ArrayList<>(items);
+        sorted.sort(Comparator.comparingInt(GUIItem::priority));
+        for (GUIItem item : sorted) {
+            if (!visible(item, player, target)) continue;
             ItemStack stack = ItemManager.createGUIItem(item, player, target);
-            // Check if the item use permission to see
-            if(item.usePermission()){
-                // If the player doesn't have the permission, don't show it
-                if(!player.hasPermission(item.permission())) {
+            List<Integer> slots = item.slots().stream()
+                    .filter(slot -> slot != null && slot >= 0 && slot < getInventory().getSize()).toList();
+            setItems(slots, stack, event -> {
+                event.setCancelled(true);
+                if (!player.isOnline() || !target.isOnline() ||
+                        (!forced && !PlayerProfiles.getInstance().getInventoryManager().canView(player, target))) {
+                    close(player);
                     return;
                 }
-            }
-            // Check if the item is set to only visitor
-            if(item.onlyVisitor()){
-                // If the player and the target is the same, don't show the item
-                if(player.equals(target)) {
+                // Recheck immediately; permission revocation need not wait for refresh.
+                if (!visible(item, player, target)) {
+                    setAllItems(items, player, target);
                     return;
                 }
-            }
-            // Check if the item is set to only owner
-            if(item.onlyOwner()){
-                // If the player and the target is not the same, don't show the item
-                if(!player.equals(target)) {
-                    return;
-                }
-            }
-            // Now, set the item to the inventory
-            this.setItems(item.slots(), stack, event -> {
-                // Set the click event for the item
-                ClickManager.handleInventoryClick(item, player, target, event);
+                ClickManager.handleInventoryClick(item, player, target, event, forced);
             });
-        });
-        // After all items being set, we finally set the fill items
-        ItemManager.fillItem(this, PlayerProfiles.GUI_DEFAULT.getConfig());
+        }
+        ItemManager.fillItem(this, config);
     }
 
-    private void checkDistance(Player player, Player target){
-        // If the target is offline, just close the inventory
-        if(target == null){
-            // Close the inventory
-            player.closeInventory();
-            // Send a message to the player
-            player.sendMessage(Common.color(ConfigValue.DISTANCE_TOO_FAR
-                    .replace("{prefix}", ConfigValue.PREFIX))
-                    .replace("{player}", target.getName()));
+    private void checkDistance(Player player, Player target) {
+        if (player == null || !player.isOnline()) {
+            cancelTasks();
             return;
         }
-        if(!player.getWorld().equals(target.getWorld())){
-            // Close the inventory
-            player.closeInventory();
-            // Send a message to the player
+        if (target == null || !target.isOnline() || !player.getWorld().equals(target.getWorld()) ||
+                player.getLocation().distance(target.getLocation()) > ConfigValue.MAXIMUM_DISTANCE) {
+            close(player);
             player.sendMessage(Common.color(ConfigValue.DISTANCE_TOO_FAR
-                    .replace("{prefix}", ConfigValue.PREFIX))
-                    .replace("{player}", target.getName()));
-            return;
-        }
-        // Get the distance between the player and the target
-        double distance = player.getLocation().distance(target.getLocation());
-        // Check if the distance is greater than the configured maximum distance
-        if(distance > ConfigValue.MAXIMUM_DISTANCE){
-            // Close the inventory
-            player.closeInventory();
-            // Send a message to the player
-            player.sendMessage(Common.color(ConfigValue.DISTANCE_TOO_FAR
-                    .replace("{prefix}", ConfigValue.PREFIX))
-                    .replace("{player}", target.getName()));
+                    .replace("{prefix}", ConfigValue.PREFIX).replace("{player}", targetName)));
         }
     }
 }

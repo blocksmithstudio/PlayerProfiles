@@ -25,6 +25,7 @@ public class PlayerProfiles extends JavaPlugin {
     private final InventoryManager inventoryManager = new InventoryManager(this);
     private final CustomGUIManager customGUIManager = new CustomGUIManager(this);
     private final ProfileManager profileManager = new ProfileManager();
+    private final PlayerInteract playerInteract = new PlayerInteract(this);
     private final CustomGuiCreator customGuiCreator = new CustomGuiCreator(this);
 
     @Override
@@ -53,7 +54,7 @@ public class PlayerProfiles extends JavaPlugin {
         // Load all profile data
         profileManager.loadProfileData();
         // Register the player interact event
-        Bukkit.getPluginManager().registerEvents(new PlayerInteract(this), this);
+        Bukkit.getPluginManager().registerEvents(playerInteract, this);
         // Register all commands
         registerCommands();
         // Add bstats metrics
@@ -62,10 +63,13 @@ public class PlayerProfiles extends JavaPlugin {
 
     @Override
     public void onDisable(){
-        // Plugin shutdown logic
-        MDLib.shutdown();
-        // Save all profile data
-        profileManager.saveProfileData();
+        try {
+            inventoryManager.closeInventories();
+            profileManager.saveProfileData();
+        } finally {
+            MDLib.shutdown();
+            instance = null;
+        }
     }
 
     private void initializeConfig() {
@@ -80,10 +84,13 @@ public class PlayerProfiles extends JavaPlugin {
     }
 
     public void reloadAllThing(){
-        // Reload all configuration
+        // Menus keep item lists and tasks from the previous configuration.
+        inventoryManager.closeInventories();
         Config.reload();
+        DependencyManager.checkDependency();
         // Re-initialize the config value
         ConfigValue.initialize();
+        if (!ConfigValue.COOLDOWN_ENABLED) playerInteract.clearCooldowns();
         // Reload all items for the profile inventory
         inventoryManager.reInitialize();
         // Reload all custom gui creator

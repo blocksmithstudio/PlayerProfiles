@@ -57,10 +57,11 @@ public class ConfigValue {
         PREFIX = config.getString("messages.prefix");
 
         AUTO_REFRESH_ENABLED = config.getBoolean("autoRefresh.enabled");
-        AUTO_REFRESH_TICK = config.getInt("autoRefresh.refreshEvery");
+        AUTO_REFRESH_TICK = Math.max(1, config.getInt("autoRefresh.refreshEvery", 20));
 
         DISTANCE_CHECK_ENABLED = config.getBoolean("distanceCheck.enabled");
-        MAXIMUM_DISTANCE = config.getDouble("distanceCheck.distance");
+        MAXIMUM_DISTANCE = config.getDouble("distanceCheck.distance", 30);
+        if (!Double.isFinite(MAXIMUM_DISTANCE) || MAXIMUM_DISTANCE < 0) MAXIMUM_DISTANCE = 30;
         DISTANCE_TOO_FAR = config.getString("distanceCheck.tooFarMessage");
 
         DISABLE_NPC_PROFILE = config.getBoolean("options.disableNPC");
@@ -76,7 +77,7 @@ public class ConfigValue {
         TARGET_DISABLED_REGIONS = config.getString("disabledRegions.targetInDisabledRegionMessage");
 
         COOLDOWN_ENABLED = config.getBoolean("cooldown.enabled");
-        COOLDOWN_TIME = config.getInt("cooldown.duration");
+        COOLDOWN_TIME = Math.max(0, config.getInt("cooldown.duration"));
         COOLDOWN_MESSAGE = config.getString("cooldown.message");
 
         NO_PERMISSION = config.getString("messages.noPermission");
